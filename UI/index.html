@@ -20,20 +20,15 @@
   <!-- CSP (GitHub Pages-safe, allow scripts from self) -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://github.com/Bloodware-Inc/KrySearch/blob/main/;">
-
   <!-- Favicon -->
   <link rel="icon" type="image/png"
         href="https://github.com/Bloodware-Inc/KrySearch/blob/main/lgoo.png?raw=true">
-
   <!-- Logo (can be used anywhere in body) -->
   <link rel="preload" as="image" href="https://github.com/Bloodware-Inc/KrySearch/blob/main/lgoo.png?raw=true">
-
   <!-- Styles -->
   <link rel="stylesheet" href="style.css">
-
 </head>
 <body spellcheck="false">
-
   <div class="box">
     <img src="https://github.com/Bloodware-Inc/KrySearch/blob/main/lgoo.png?raw=true" alt="KrySearch Logo" class="logo">
     <h1>KrySearch</h1>
@@ -43,11 +38,13 @@
     <button id="go">Go</button>
     <div class="meta" id="status"></div>
   </div>
-
   <!-- External plugins -->
-  <script src="Modules/fingerprint.clean.js" defer></script>
+  <script src="Modules/privacy.clean.js" defer></script>
   <script src="Modules/privacy.hardening.js" defer></script>
   <script src="Modules/feature-lockdown.js" defer></script>
+  <script src="Modules/total-fingerprint-hardening.js" defer></script>
+  <script src="Modules/ultra-adaptive-quad9-doh.js" defer></script>
+  <script src="Modules/privacy.fingerprint.js" defer></script>
   <script src="Modules/secure-transport-ultra.js" defer></script>
   <script src="Modules/native-url-launcher.js" defer></script>
 

@@ -5,7 +5,7 @@ let CONFIG = null;
 // Load config.json externally
 async function loadConfig() {
   try {
-    const res = await fetch('config.json', { cache: 'no-store' });
+    const res = await fetch('Config/config.json', { cache: 'no-store' });
     CONFIG = await res.json();
   } catch { CONFIG = null; }
 }

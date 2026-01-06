@@ -1,8 +1,7 @@
 /* KrySearch Total Fingerprint Hardening Plugin
  * Silent, deterministic, privacy-first
- * Covers all known high-entropy JS surfaces
+ * Covers all high-entropy JS surfaces
  */
-
 (function () {
   const plugin = {
     id: "total-fingerprint-hardening",
@@ -10,59 +9,45 @@
 
     run(ctx) {
       try {
-
-        /* =====================================================
-           Engine profile (deterministic, no randomness)
-        ===================================================== */
-        const engine =
-          new URLSearchParams(location.search).get("engine") || "default";
+        // =========================
+        // Engine profile (deterministic)
+        // =========================
+        const engine = new URLSearchParams(location.search).get("engine") || "default";
 
         const ENGINE_PROFILES = {
-          default: {
-            vendor: "KrySearch",
-            renderer: "KrySearch Renderer",
-            audioNoise: 0,
-            perfResolution: 100
-          },
-          tor: {
-            vendor: "Mozilla",
-            renderer: "Gecko",
-            audioNoise: 0,
-            perfResolution: 100
-          },
-          chromium: {
-            vendor: "Google Inc.",
-            renderer: "ANGLE",
-            audioNoise: 0,
-            perfResolution: 50
-          }
+          default: { vendor: "KrySearch", renderer: "KrySearch Renderer", audioNoise: 0, perfResolution: 100 },
+          tor:     { vendor: "Mozilla", renderer: "Gecko", audioNoise: 0, perfResolution: 100 },
+          chromium:{ vendor: "Google Inc.", renderer: "ANGLE", audioNoise: 0, perfResolution: 50 }
         };
 
         const profile = ENGINE_PROFILES[engine] || ENGINE_PROFILES.default;
 
-        /* =====================================================
-           Canvas
-        ===================================================== */
-        HTMLCanvasElement.prototype.toDataURL = () =>
-          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+        // =========================
+        // Canvas
+        // =========================
+        if (HTMLCanvasElement.prototype.toDataURL) {
+          HTMLCanvasElement.prototype.toDataURL = () =>
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+        }
 
-        CanvasRenderingContext2D.prototype.getImageData = function (x, y, w, h) {
-          return new ImageData(w, h);
-        };
+        if (CanvasRenderingContext2D.prototype.getImageData) {
+          CanvasRenderingContext2D.prototype.getImageData = function (x, y, w, h) {
+            return new ImageData(w, h);
+          };
+        }
 
-        /* =====================================================
-           WebGL
-        ===================================================== */
+        // =========================
+        // WebGL
+        // =========================
         function lockWebGL(proto) {
           if (!proto) return;
           const original = proto.getParameter;
-
           proto.getParameter = function (p) {
             const map = {
-              37445: profile.vendor,
-              37446: profile.renderer,
-              7936: "WebGL 1.0",
-              7937: "WebGL GLSL ES 1.0"
+              37445: profile.vendor,     // UNMASKED_VENDOR_WEBGL
+              37446: profile.renderer,   // UNMASKED_RENDERER_WEBGL
+              7936: "WebGL 1.0",         // VERSION
+              7937: "WebGL GLSL ES 1.0"  // SHADING_LANGUAGE_VERSION
             };
             return p in map ? map[p] : original.call(this, p);
           };
@@ -71,50 +56,44 @@
         lockWebGL(WebGLRenderingContext?.prototype);
         lockWebGL(WebGL2RenderingContext?.prototype);
 
-        /* =====================================================
-           Fonts
-        ===================================================== */
+        // =========================
+        // Fonts
+        // =========================
         if (document.fonts) {
           Object.defineProperty(document.fonts, "check", {
             value: () => true,
             configurable: true
           });
-
           Object.defineProperty(document.fonts, "values", {
             value: function* () {},
             configurable: true
           });
         }
 
-        /* =====================================================
-           Permissions API
-        ===================================================== */
+        // =========================
+        // Permissions API
+        // =========================
         if (navigator.permissions?.query) {
-          navigator.permissions.query = () =>
-            Promise.resolve({
-              state: "prompt",
-              onchange: null
-            });
+          navigator.permissions.query = () => Promise.resolve({ state: "prompt", onchange: null });
         }
 
-        /* =====================================================
-           Battery API
-        ===================================================== */
+        // =========================
+        // Battery API
+        // =========================
         if (navigator.getBattery) {
-          navigator.getBattery = () =>
-            Promise.resolve({
-              charging: true,
-              chargingTime: 0,
-              dischargingTime: Infinity,
-              level: 1,
-              onchargingchange: null,
-              onlevelchange: null
-            });
+          navigator.getBattery = () => Promise.resolve({
+            charging: true,
+            chargingTime: 0,
+            dischargingTime: Infinity,
+            level: 1,
+            onchargingchange: null,
+            onlevelchange: null
+          });
         }
 
-        /* =====================================================
-           Network Information API
-        ===================================================== */
+        // =========================
+        // Network Information API
+        // =========================
         if (navigator.connection) {
           Object.defineProperty(navigator, "connection", {
             get: () => ({
@@ -128,21 +107,16 @@
           });
         }
 
-        /* =====================================================
-           AudioContext fingerprint hardening
-        ===================================================== */
-        function lockAudioContext(ctxProto) {
-          if (!ctxProto) return;
-
-          const originalCreateAnalyser = ctxProto.createAnalyser;
-          ctxProto.createAnalyser = function () {
+        // =========================
+        // AudioContext
+        // =========================
+        function lockAudioContext(proto) {
+          if (!proto) return;
+          const originalCreateAnalyser = proto.createAnalyser;
+          proto.createAnalyser = function () {
             const analyser = originalCreateAnalyser.call(this);
-            analyser.getFloatFrequencyData = function (arr) {
-              arr.fill(profile.audioNoise);
-            };
-            analyser.getByteFrequencyData = function (arr) {
-              arr.fill(0);
-            };
+            analyser.getFloatFrequencyData = arr => arr.fill(profile.audioNoise);
+            analyser.getByteFrequencyData = arr => arr.fill(0);
             return analyser;
           };
         }
@@ -150,53 +124,39 @@
         lockAudioContext(window.AudioContext?.prototype);
         lockAudioContext(window.webkitAudioContext?.prototype);
 
-        /* =====================================================
-           MediaDevices
-        ===================================================== */
+        // =========================
+        // MediaDevices
+        // =========================
         if (navigator.mediaDevices) {
-          navigator.mediaDevices.enumerateDevices = () =>
-            Promise.resolve([]);
-
-          navigator.mediaDevices.getUserMedia = () =>
-            Promise.reject(new Error("MediaDevices blocked"));
+          navigator.mediaDevices.enumerateDevices = () => Promise.resolve([]);
+          navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error("MediaDevices blocked"));
         }
 
-        /* =====================================================
-           Performance API
-        ===================================================== */
+        // =========================
+        // Performance API
+        // =========================
         if (window.performance) {
-          const now = () =>
-            Math.floor(Date.now() / profile.perfResolution) *
-            profile.perfResolution;
-
+          const now = () => Math.floor(Date.now() / profile.perfResolution) * profile.perfResolution;
           performance.now = now;
           performance.timeOrigin = now();
         }
 
-        /* =====================================================
-           Internal state (no logs)
-        ===================================================== */
+        // =========================
+        // Internal state (no logs)
+        // =========================
         ctx.fingerprint = {
           hardened: true,
           engineProfile: engine,
           surfaces: [
-            "canvas",
-            "webgl",
-            "fonts",
-            "permissions",
-            "battery",
-            "network",
-            "audio",
-            "mediaDevices",
-            "performance"
+            "canvas", "webgl", "fonts", "permissions", "battery",
+            "network", "audio", "mediaDevices", "performance"
           ],
           entropy: "minimized",
           storage: "none",
           logging: false
         };
-
       } catch {
-        // silent failure by design
+        // fail silently
       }
     }
   };

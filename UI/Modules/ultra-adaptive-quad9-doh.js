@@ -1,70 +1,79 @@
-/* KrySearch Ultra-Smart Quad9 DNS Resolver
- * - Auto-selects A/AAAA based on IPv6 support
- * - MX for emails
- * - Silent, cached, privacy-first
- */
+/* Ultra-Adaptive Quad9 DoH Resolver (CSP + CORS Safe) */
 
-(function() {
-  const DOH_URL = 'https://dns.quad9.net/dns-query';
-  const cache = new Map();
+(function () {
+  const QUAD9_DOH_URL = 'https://dns.quad9.net/dns-query';
+  const domainCache = new Map();
 
-  const isDomain = input => /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(input);
-  const isEmail  = input => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input);
-
+  // Use ipify instead of test-ipv6.com for CSP-safe IPv6 check
   async function supportsIPv6() {
     try {
-      const res = await fetch("https://ipv6.test-ipv6.com/ip?", { method: "HEAD", cache: "no-store" });
-      return res.ok;
-    } catch { return false; }
+      const res = await fetch('https://api64.ipify.org?format=json', { cache: 'no-store' });
+      if (!res.ok) return false;
+      const data = await res.json();
+      return Boolean(data.ip);
+    } catch {
+      return false;
+    }
   }
 
-  function detectRecordTypes(input, ipv6) {
-    if (isEmail(input)) return ["MX"];
-    if (isDomain(input)) return ipv6 ? ["AAAA","A"] : ["A","AAAA"];
-    return [];
+  function isDomain(input) {
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(input);
   }
 
-  async function resolve(domain, type) {
-    const key = `${domain}_${type}`;
-    if (cache.has(key)) return cache.get(key);
+  async function quad9Resolve(domain, type = 'A') {
+    type = type.toUpperCase();
+    const cacheKey = `${domain}_${type}`;
+    if (domainCache.has(cacheKey)) return domainCache.get(cacheKey);
 
     try {
-      const res = await fetch(`${DOH_URL}?name=${encodeURIComponent(domain)}&type=${type}`, {
-        headers: { 'accept': 'application/dns-json' },
-        cache: 'no-store'
-      });
-      if (!res.ok) { cache.set(key,false); return false; }
+      const url = `${QUAD9_DOH_URL}?name=${encodeURIComponent(domain)}&type=${type}`;
+      const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+      if (!res.ok) {
+        domainCache.set(cacheKey, false);
+        return false;
+      }
 
       const data = await res.json();
-      if (!data.Answer) { cache.set(key,false); return false; }
+      let result = [];
 
-      const records = data.Answer
-        .filter(r => (type==="A"&&r.type===1) || (type==="AAAA"&&r.type===28) || (type==="MX"&&r.type===15))
-        .map(r => type==="MX" ? r.data.split(" ")[1] : r.data);
+      if (Array.isArray(data.Answer)) {
+        for (const record of data.Answer) {
+          if (type === 'A' || type === 'AAAA') result.push(record.data);
+          else if (type === 'MX') result.push(record.data.split(' ')[1]);
+        }
+      }
 
-      const result = records.length ? records : false;
-      cache.set(key,result);
+      if (!result.length) result = false;
+      domainCache.set(cacheKey, result);
       return result;
     } catch {
-      cache.set(key,false);
+      domainCache.set(cacheKey, false);
       return false;
     }
   }
 
   const plugin = {
-    id: "ultra-adaptive-quad9-doh",
-    description: "Ultra-smart Quad9 DNS resolver: auto A/AAAA based on IPv6, MX for emails, cached, privacy-first",
+    id: 'ultra-adaptive-quad9-doh',
+    description: 'Quad9 DoH resolver, CSP/CORS safe, IPv6-ready',
     async run(ctx) {
+      ctx.dnsResolver = { resolve: quad9Resolve };
+      ctx.supportsIPv6 = await supportsIPv6();
+
       const params = Object.fromEntries(new URLSearchParams(window.location.search));
-      const input = (params.url || params.q || "").trim();
-      if (!input) return;
+      const input = (params.url || params.q || '').trim();
+      if (!input) {
+        ctx.output = null;
+        return;
+      }
 
-      const ipv6 = await supportsIPv6();
-      const types = detectRecordTypes(input, ipv6);
-      if (!types.length) return;
-
-      ctx.dnsResolver = { resolve };
-      await Promise.all(types.map(t => resolve(input,t)));
+      if (isDomain(input)) {
+        const A = await quad9Resolve(input, 'A');
+        const AAAA = await quad9Resolve(input, 'AAAA');
+        const MX = await quad9Resolve(input, 'MX');
+        ctx.output = { domain: input, A: A || [], AAAA: AAAA || [], MX: MX || [], note: 'Resolved via Quad9 DoH, privacy-safe' };
+      } else {
+        ctx.output = null; // forward non-domain input silently
+      }
     }
   };
 

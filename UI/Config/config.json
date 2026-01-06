@@ -3,97 +3,99 @@
     "name": "KrySearch",
     "description": "Privacy-first search router for open and privacy-focused engines",
     "url": "https://krysearch.io",
-    "logo": "https://cdn.discordapp.com/attachments/1458158342739595265/1458204648404947018/file_00000000ae4471fda1a4f9cc24f64be5.png?ex=695eca68&is=695d78e8&hm=9065c921c86ec91e16a0c69e0c3df4cf47f47cda1cd8b35cb929c92dd57ad801&animated=true",
+    "logo": "https://raw.githubusercontent.com/Bloodware-Inc/KrySearch/main/lgoo.png?raw=true",
     "theme": "dark",
     "language": "en-US"
   },
+
   "search": {
     "defaultEngine": "startpage",
-    "routing": "engine-query",
-    "noInputParsing": true,
     "maxResults": 50,
     "safeSearch": true,
     "autocomplete": true,
     "highlightTerms": true
   },
+
   "engines": {
     "open_source": {
       "searxng": {
         "name": "SearXNG",
         "description": "Open-source metasearch engine aggregating results privately",
+        "url": "https://searx.space/?q={query}",
         "base": "https://searx.space/",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "mode": "query",
+        "appendInput": true
       },
       "yacy": {
         "name": "YaCy",
-        "description": "Decentralized, peer-to-peer search engine",
+        "description": "Decentralized peer-to-peer search engine",
+        "url": "http://search.yacy.net/Search?query={query}",
         "base": "http://search.yacy.net/",
-        "queryParam": "query",
-        "directParam": "url",
-        "mode": "direct"
+        "mode": "query",
+        "appendInput": true
       },
       "mojeek": {
         "name": "Mojeek",
         "description": "Independent crawler and index, no tracking",
-        "base": "https://www.mojeek.com/search",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://www.mojeek.com/search?q={query}",
+        "base": "https://www.mojeek.com/",
+        "mode": "query",
+        "appendInput": true
       },
       "metager": {
         "name": "MetaGer",
         "description": "Open-source privacy-oriented metasearch from Germany",
-        "base": "https://metager.org/search",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://metager.org/search?q={query}",
+        "base": "https://metager.org/",
+        "mode": "query",
+        "appendInput": true
       }
     },
+
     "closed_source": {
       "startpage": {
         "name": "Startpage",
         "description": "Google results without tracking",
-        "base": "https://www.startpage.com/sp/search",
-        "queryParam": "query",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://www.startpage.com/sp/search?query={query}",
+        "base": "https://www.startpage.com/",
+        "mode": "query",
+        "appendInput": true
       },
       "duckduckgo": {
         "name": "DuckDuckGo",
         "description": "Privacy-focused search engine",
+        "url": "https://duckduckgo.com/?q={query}&kl=wt-wt",
         "base": "https://duckduckgo.com/",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "mode": "query",
+        "appendInput": true
       },
       "brave": {
         "name": "Brave Search",
         "description": "Independent privacy-focused search by Brave",
-        "base": "https://search.brave.com/search",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://search.brave.com/search?q={query}",
+        "base": "https://search.brave.com/",
+        "mode": "query",
+        "appendInput": true
       },
       "swisscows": {
         "name": "Swisscows",
         "description": "Family-friendly privacy-first search",
-        "base": "https://swisscows.com/web",
-        "queryParam": "query",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://swisscows.com/web?query={query}",
+        "base": "https://swisscows.com/",
+        "mode": "query",
+        "appendInput": true
       },
       "presearch": {
         "name": "Presearch",
         "description": "Decentralized privacy search engine",
-        "base": "https://presearch.com/search",
-        "queryParam": "q",
-        "directParam": "url",
-        "mode": "direct"
+        "url": "https://presearch.com/search?q={query}",
+        "base": "https://presearch.com/",
+        "mode": "query",
+        "appendInput": true
       }
     }
   },
+
   "appearance": {
     "font": "Inter, sans-serif",
     "colors": {

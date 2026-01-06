@@ -29,8 +29,8 @@
       "yacy": {
         "name": "YaCy",
         "description": "Decentralized peer-to-peer search engine",
-        "url": "http://search.yacy.net/Search?query={query}",
-        "base": "http://search.yacy.net/",
+        "url": "https://search.yacy.net/Search?query={query}",
+        "base": "https://search.yacy.net/",
         "mode": "query",
         "appendInput": true
       },

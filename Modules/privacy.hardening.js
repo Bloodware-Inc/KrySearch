@@ -4,7 +4,7 @@
     description: "Disable high-risk browser APIs",
 
     run() {
-      const deny = () => { throw new Error("Blocked") }
+      const deny = () => undefined; // silent, returns nothing instead of throwing
 
       const targets = [
         "geolocation",
@@ -12,20 +12,31 @@
         "clipboard",
         "bluetooth",
         "usb",
-        "serial"
-      ]
+        "serial",
+        "vibrate",
+        "storage",
+        "push"
+      ];
 
       targets.forEach(k => {
-        if (navigator[k]) {
+        if (navigator[k] !== undefined) {
           try {
             Object.defineProperty(navigator, k, {
-              get: deny
-            })
-          } catch {}
+              get: deny,
+              configurable: false,
+              enumerable: false
+            });
+          } catch {
+            // fail silently
+          }
         }
-      })
-    }
-  }
+      });
 
-  window.KRY_PLUGINS.push(plugin)
-})()
+      // freeze the navigator to prevent further tampering
+      try { Object.freeze(navigator); } catch {}
+    }
+  };
+
+  window.KRY_PLUGINS = window.KRY_PLUGINS || [];
+  window.KRY_PLUGINS.push(plugin);
+})();

@@ -7,25 +7,28 @@ async function loadConfig() {
   try {
     const res = await fetch('Config/config.json', { cache: 'no-store' });
     CONFIG = await res.json();
-  } catch { CONFIG = null; }
+  } catch {
+    console.error('Failed to load config.json');
+    CONFIG = null;
+  }
 }
 
-// Plugin runner (external plugins will push to window.KRY_PLUGINS)
+// Run external plugins
 function runPlugins() {
   if (!window.KRY_PLUGINS) return;
   window.KRY_PLUGINS.slice()
-    .sort((a,b)=> (a.order||0)-(b.order||0))
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
     .forEach(p => { try { if (p?.run) p.run(window.KRY_CONTEXT); } catch {} });
 }
 
-// Populate engines dynamically from config
+// Populate engine dropdown dynamically
 function populateEngineDropdown() {
   if (!CONFIG) return;
   const select = document.getElementById('engine');
   if (!select) return;
 
   select.innerHTML = '';
-  const engines = {...CONFIG.engines.open_source, ...CONFIG.engines.closed_source};
+  const engines = { ...CONFIG.engines.open_source, ...CONFIG.engines.closed_source };
 
   Object.keys(engines).forEach(key => {
     const eng = engines[key];
@@ -35,7 +38,7 @@ function populateEngineDropdown() {
     select.appendChild(opt);
   });
 
-  // select default
+  // Default selection
   const params = new URLSearchParams(location.search);
   const engineParam = params.get('engine') || CONFIG.search.defaultEngine;
   if (engineParam && engines[engineParam]) select.value = engineParam;
@@ -43,23 +46,40 @@ function populateEngineDropdown() {
 
 // Safe navigation
 function navigate(url) {
+  if (!url) return;
   if (window.__KRY_HARD_NAV__) window.__KRY_HARD_NAV__(url);
   else location.assign(url);
 }
 
-// Query handler
+// Main query handler
 function handleQuery(value, engineKey, isUrl) {
   if (!CONFIG || !value) return;
   value = value.trim();
   if (/^http:\/\//i.test(value)) return;
 
-  const engines = {...CONFIG.engines.open_source, ...CONFIG.engines.closed_source};
+  const engines = { ...CONFIG.engines.open_source, ...CONFIG.engines.closed_source };
   const engine = engines[engineKey] || engines[CONFIG.search.defaultEngine];
   if (!engine) return;
 
-  const query = encodeURIComponent(value);
-  const searchUrl = engine.url.replace("{query}", query);
-  navigate(searchUrl);
+  let target = '';
+
+  if (isUrl || engine.mode === 'direct') {
+    // Direct mode: go to the base + input if appendInput
+    target = engine.base;
+    if (engine.appendInput) {
+      if (!target.endsWith('/') && !value.startsWith('/')) target += '/';
+      target += value;
+    }
+  } else if (engine.mode === 'query') {
+    if (!engine.url) return;
+    const query = encodeURIComponent(value);
+    target = engine.url.replace('{query}', query);
+  } else {
+    console.warn('Unknown engine mode:', engine.mode);
+    return;
+  }
+
+  navigate(target);
 }
 
 // DOM ready
@@ -83,8 +103,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   let q = params.get('q');
   let url = params.get('url');
 
-  if (url) { try { url = decodeURIComponent(url); } catch {} handleQuery(url, engine, true); }
-  else if (q) { try { q = decodeURIComponent(q); } catch {} handleQuery(q, engine, false); }
+  if (url) { 
+    try { url = decodeURIComponent(url); } catch {}
+    handleQuery(url, engine, true); 
+  } else if (q) { 
+    try { q = decodeURIComponent(q); } catch {}
+    handleQuery(q, engine, false); 
+  }
 
   const goBtn = document.getElementById('go');
   if (goBtn) {

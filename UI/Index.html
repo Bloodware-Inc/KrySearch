@@ -3,49 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>KrySearch</title>
-
-  <!-- Privacy -->
+  <!-- Privacy + CSP -->
   <meta name="referrer" content="no-referrer">
-  <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="color-scheme" content="dark">
-  <meta http-equiv="x-dns-prefetch-control" content="off">
-  <meta name="format-detection" content="telephone=no">
-
-  <!-- Permissions Policy (single-line = Pages safe) -->
-  <meta http-equiv="Permissions-Policy" content="accelerometer=(),ambient-light-sensor=(),autoplay=(),battery=(),camera=(),clipboard-read=(),clipboard-write=(),display-capture=(),document-domain=(),encrypted-media=(),fullscreen=(),geolocation=(),gyroscope=(),hid=(),idle-detection=(),interest-cohort=(),magnetometer=(),microphone=(),midi=(),payment=(),picture-in-picture=(),publickey-credentials-get=(),screen-wake-lock=(),serial=(),usb=(),web-share=(),xr-spatial-tracking=()">
-
-  <!-- CSP (lenient but Pages-friendly) -->
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self';">
-
-  <!-- Favicon (fixed + encoded) -->
-  <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='70'%3E%F0%9F%95%B6%EF%B8%8F%3C/text%3E%3C/svg%3E">
-
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body spellcheck="false">
   <div class="box">
     <h1>KrySearch</h1>
-
-    <input
-      id="q"
-      type="search"
-      placeholder="Search or paste URL"
-      autocomplete="off"
-      autocapitalize="off"
-      autocorrect="off"
-      inputmode="search"
-    >
-
-    <button id="go" type="button">Go</button>
+    <input id="q" type="search" placeholder="Search or paste URL" autocomplete="off">
+    <select id="engine"></select>
+    <button id="go">Go</button>
     <div class="meta" id="status"></div>
   </div>
 
+  <!-- External plugins -->
+  <script src="Modules/fingerprint.clean.js" defer></script>
+  <script src="Modules/privacy.hardening.js" defer></script>
+  <script src="Modules/feature-lockdown.js" defer></script>
+  <script src="Modules/secure-transport-ultra.js" defer></script>
+  <script src="Modules/native-url-launcher.js" defer></script>
+  <!-- Main UI / config loader -->
   <script src="search.js" defer></script>
 </body>
 </html>

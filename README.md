@@ -175,12 +175,9 @@ Krynet, LLC is a privacy-first technology company committed to creating tools an
 
 For more information about Krynet, LLC and its mission, visit Krynet.ai.
 
-Contact
+## Contact
 Email: contact@krynet.ai
-
 Website: https://krynet.ai
-
-
 ---
 
 ### Key Updates for Extensibility:

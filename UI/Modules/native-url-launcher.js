@@ -3,35 +3,37 @@ window.KRY_PLUGINS.push({
   id: "native-url-adaptive-max",
   order: 60,
 
-  run(ctx) {
+  run(ctx: any) {
     try {
       const appMap = [
         // Gaming
-        { test: /steam\.com/, app: url => 'steam://openurl/'+encodeURIComponent(url) },
-        { test: /epicgames\.com/, app: url => 'com.epicgames.launcher://'+encodeURIComponent(url) },
-        { test: /gog\.com/, app: url => 'goggalaxy://launch/'+encodeURIComponent(url) },
-        { test: /battle\.net/, app: url => 'battlenet://'+encodeURIComponent(url) },
+        { test: /steam\.com/, app: (url: string) => `steam://openurl/${encodeURIComponent(url)}` },
+        { test: /epicgames\.com/, app: (url: string) => `com.epicgames.launcher://${encodeURIComponent(url)}` },
+        { test: /gog\.com/, app: (url: string) => `goggalaxy://launch/${encodeURIComponent(url)}` },
+        { test: /battle\.net/, app: (url: string) => `battlenet://${encodeURIComponent(url)}` },
 
         // Social / Collaboration
-        { test: /discord\.com/, app: url => 'discord://'+encodeURIComponent(url) },
-        { test: /slack\.com/, app: url => 'slack://open' },
-        { test: /teams\.microsoft\.com/, app: url => 'msteams://'+encodeURIComponent(url) },
-        { test: /zoom\.us/, app: url => 'zoomus://'+encodeURIComponent(url) },
+        { test: /discord\.com/, app: (url: string) => `discord://${encodeURIComponent(url)}` },
+        { test: /slack\.com/, app: () => 'slack://open' },
+        { test: /teams\.microsoft\.com/, app: (url: string) => `msteams://${encodeURIComponent(url)}` },
+        { test: /zoom\.us/, app: (url: string) => `zoomus://${encodeURIComponent(url)}` },
 
         // Music / media / creators
-        { test: /spotify\.com/, app: url => 'spotify://'+encodeURIComponent(url) },
+        { test: /spotify\.com/, app: (url: string) => `spotify://${encodeURIComponent(url)}` },
 
         // Krynet
-        { test: /krynet\.ai/, app: url => 'krynet://'+encodeURIComponent(url) }
+        { test: /krynet\.ai/, app: (url: string) => `krynet://${encodeURIComponent(url)}` }
       ];
 
       const params = new URLSearchParams(location.search);
       let urlParam = params.get("url");
       if (!urlParam) return;
 
-      try { urlParam = decodeURIComponent(urlParam); } catch {}
+      try { 
+        urlParam = decodeURIComponent(urlParam); 
+      } catch {}
 
-      // enforce HTTPS strictly
+      // Enforce HTTPS strictly
       if (!/^https:\/\//i.test(urlParam)) return;
 
       // Adaptive launcher: try app first, fallback to web
@@ -47,12 +49,12 @@ window.KRY_PLUGINS.push({
             launched = true;
             break;
           } catch {
-            // fail silently, fallback
+            // Fail silently, fallback
           }
         }
       }
 
-      // fallback to standard HTTPS
+      // Fallback to standard HTTPS
       if (!launched) {
         if (window.__KRY_HARD_NAV__) {
           window.__KRY_HARD_NAV__(urlParam);
@@ -62,7 +64,7 @@ window.KRY_PLUGINS.push({
       }
 
     } catch {
-      // silent fail
+      // Silent fail
     }
   }
 });

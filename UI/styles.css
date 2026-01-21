@@ -30,6 +30,12 @@ h1 {
   margin-bottom: 24px;
 }
 
+.logo {
+  width: 120px; /* Adjust logo size */
+  height: auto;
+  margin-bottom: 24px;
+}
+
 input {
   width: 100%;
   padding: 18px;

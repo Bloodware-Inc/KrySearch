@@ -12,17 +12,20 @@
   <link rel="preload" as="image" href="https://github.com/Bloodware-Inc/KrySearch/blob/main/lgoo.png?raw=true">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body spellcheck="false">
-  <div class="box">
+<body>
+  <div class="container">
     <img src="https://github.com/Bloodware-Inc/KrySearch/blob/main/lgoo.png?raw=true" alt="KrySearch Logo" class="logo">
     <h1>KrySearch</h1>
     <input id="q" type="search" placeholder="Search or paste URL" autocomplete="off">
     <select id="engine"></select>
     <button id="go">Go</button>
-    <div class="meta" id="status"></div>
+    <div class="meta" id="status">Private search mode</div>
+    <footer>
+      <p>Powered by <a href="https://github.com/Bloodware-Inc/KrySearch" target="_blank">KrySearch, LLC</a></p>
+    </footer>
   </div>
   <noscript>
-    <p><strong>JavaScript is disabled in your browser. Please enable it to use this website.</strong></p>
+    <p><strong>JavaScript is disabled. Please enable it to use this website.</strong></p>
     <form action="/" method="get">
       <label for="q">Search:</label>
       <input type="text" id="q" name="q" placeholder="Enter your search">

@@ -85,6 +85,12 @@ function handleQuery(value, engineKey, isUrl) {
     }
   }
 
+  // Enforce HTTPS for security and privacy
+  if (!target.startsWith('https://')) {
+    console.error('Only HTTPS URLs are allowed for security.');
+    return;
+  }
+
   navigate(target);
 }
 

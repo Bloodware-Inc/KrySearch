@@ -2,12 +2,10 @@ window.KRY_PLUGINS = window.KRY_PLUGINS || [];
 window.KRY_PLUGINS.push({
   id: "secure-transport-ultra",
   order: 95,
-
   run() {
     try {
       const enc = new TextEncoder();
       const dec = new TextDecoder();
-
       const hasCrypto =
         window.crypto &&
         crypto.subtle &&
@@ -25,9 +23,6 @@ window.KRY_PLUGINS.push({
           )
         );
 
-      /* ===============================
-         Session key (CSP‑aware)
-      =============================== */
       const sessionKeyPromise = hasCrypto
         ? crypto.subtle.generateKey(
             { name: "AES-GCM", length: 256 },
@@ -65,9 +60,6 @@ window.KRY_PLUGINS.push({
         for (const k in o) if (o[k] instanceof Uint8Array) o[k].fill(0);
       }
 
-      /* ===============================
-         Engine detection
-      =============================== */
       function isEngineURL(url) {
         try {
           return new URL(url, location.href).searchParams.has("engine");
@@ -88,9 +80,6 @@ window.KRY_PLUGINS.push({
         }
       }
 
-      /* ===============================
-         Shadow‑wrap location APIs
-      =============================== */
       const realAssign = location.assign.bind(location);
       const realReplace = location.replace.bind(location);
 
@@ -110,9 +99,6 @@ window.KRY_PLUGINS.push({
         configurable: false
       });
 
-      /* ===============================
-         Pre‑DOM sealing (click + submit)
-      =============================== */
       document.addEventListener(
         "click",
         e => {
@@ -138,9 +124,6 @@ window.KRY_PLUGINS.push({
         true
       );
 
-      /* ===============================
-         MutationObserver: kill injected anchors
-      =============================== */
       const observer = new MutationObserver(mutations => {
         for (const m of mutations) {
           for (const n of m.addedNodes) {
@@ -165,9 +148,6 @@ window.KRY_PLUGINS.push({
         subtree: true
       });
 
-      /* ===============================
-         Expose hardened entry (locked)
-      =============================== */
       Object.defineProperty(window, "__KRY_HARD_NAV__", {
         value: hardNavigate,
         writable: false,
@@ -176,7 +156,6 @@ window.KRY_PLUGINS.push({
       });
 
       Object.freeze(window.__KRY_HARD_NAV__);
-
     } catch {
       // silent by design
     }

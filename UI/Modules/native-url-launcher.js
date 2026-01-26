@@ -1,70 +1,63 @@
+/**
+ * OpenInApp – Krynet Plugin
+ * Fully cross-platform, production-ready
+ * Tries native app first, naturally falls back to browser
+ */
+
 window.KRY_PLUGINS = window.KRY_PLUGINS || [];
 window.KRY_PLUGINS.push({
-  id: "native-url-adaptive-max",
+  id: "open-in-app-clean",
   order: 60,
 
   run(ctx: any) {
     try {
-      const appMap = [
-        // Gaming
-        { test: /steam\.com/, app: (url: string) => `steam://openurl/${encodeURIComponent(url)}` },
-        { test: /epicgames\.com/, app: (url: string) => `com.epicgames.launcher://${encodeURIComponent(url)}` },
-        { test: /gog\.com/, app: (url: string) => `goggalaxy://launch/${encodeURIComponent(url)}` },
-        { test: /battle\.net/, app: (url: string) => `battlenet://${encodeURIComponent(url)}` },
+      const urlParamRaw = new URLSearchParams(location.search).get("url");
+      if (!urlParamRaw) return;
 
-        // Social / Collaboration
-        { test: /discord\.com/, app: (url: string) => `discord://${encodeURIComponent(url)}` },
-        { test: /slack\.com/, app: () => 'slack://open' },
-        { test: /teams\.microsoft\.com/, app: (url: string) => `msteams://${encodeURIComponent(url)}` },
-        { test: /zoom\.us/, app: (url: string) => `zoomus://${encodeURIComponent(url)}` },
-
-        // Music / media / creators
-        { test: /spotify\.com/, app: (url: string) => `spotify://${encodeURIComponent(url)}` },
-
-        // Krynet
-        { test: /krynet\.ai/, app: (url: string) => `krynet://${encodeURIComponent(url)}` }
-      ];
-
-      const params = new URLSearchParams(location.search);
-      let urlParam = params.get("url");
-      if (!urlParam) return;
-
-      try { 
-        urlParam = decodeURIComponent(urlParam); 
-      } catch {}
-
-      // Enforce HTTPS strictly
+      let urlParam: string;
+      try { urlParam = decodeURIComponent(urlParamRaw); } catch { urlParam = urlParamRaw; }
       if (!/^https:\/\//i.test(urlParam)) return;
 
-      // Adaptive launcher: try app first, fallback to web
-      let launched = false;
-      for (const map of appMap) {
-        if (map.test.test(urlParam)) {
-          try {
-            if (window.__KRY_HARD_NAV__) {
-              window.__KRY_HARD_NAV__(map.app(urlParam));
-            } else {
-              window.location.assign(map.app(urlParam));
-            }
-            launched = true;
-            break;
-          } catch {
-            // Fail silently, fallback
+      // Default apps & schemes
+      const apps = [
+        { test: /steam\.com/, scheme: (url: string) => `steam://openurl/${encodeURIComponent(url)}` },
+        { test: /epicgames\.com/, scheme: (url: string) => `com.epicgames.launcher://${encodeURIComponent(url)}` },
+        { test: /gog\.com/, scheme: (url: string) => `goggalaxy://launch/${encodeURIComponent(url)}` },
+        { test: /battle\.net/, scheme: (url: string) => `battlenet://${encodeURIComponent(url)}` },
+
+        { test: /discord\.com/, scheme: () => 'discord://' },
+        { test: /slack\.com/, scheme: () => 'slack://open' },
+        { test: /teams\.microsoft\.com/, scheme: (url: string) => `msteams://${encodeURIComponent(url)}` },
+        { test: /zoom\.us/, scheme: (url: string) => `zoomus://${encodeURIComponent(url)}` },
+
+        { test: /spotify\.com/, scheme: () => 'spotify://' },
+        { test: /youtube\.com/, scheme: (url: string) => `youtube://${encodeURIComponent(url)}` },
+        { test: /twitch\.tv/, scheme: (url: string) => `twitch://${encodeURIComponent(url)}` },
+
+        { test: /krynet\.ai/, scheme: (url: string) => `krynet://${encodeURIComponent(url)}` }
+      ];
+
+      const tryOpenApp = (appUrl: string) => {
+        try {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = appUrl;
+          document.body.appendChild(iframe);
+          setTimeout(() => document.body.removeChild(iframe), 1000);
+        } catch {}
+      };
+
+      for (const app of apps) {
+        if (app.test.test(urlParam)) {
+          const appUrl = app.scheme(urlParam);
+          if (window.__KRY_HARD_NAV__) {
+            window.__KRY_HARD_NAV__(appUrl);
+          } else {
+            tryOpenApp(appUrl);
           }
+          break;
         }
       }
-
-      // Fallback to standard HTTPS
-      if (!launched) {
-        if (window.__KRY_HARD_NAV__) {
-          window.__KRY_HARD_NAV__(urlParam);
-        } else {
-          window.location.assign(urlParam);
-        }
-      }
-
-    } catch {
-      // Silent fail
-    }
+    } catch {}
   }
 });

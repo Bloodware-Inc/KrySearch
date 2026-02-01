@@ -3,13 +3,16 @@
  * https://github.com/Bloodware-Inc/KrySearch
  */
 (function () {
+  "use strict";
+
   const plugin = {
     id: "privacy-hardening",
-    description: "Disable high-risk browser APIs",
+    description: "Disable high-risk browser APIs (cross-browser safe)",
 
     run() {
-      const deny = () => undefined; // silent, returns nothing instead of throwing
+      const deny = () => undefined;
 
+      // List of high-risk navigator APIs
       const targets = [
         "geolocation",
         "mediaDevices",
@@ -22,22 +25,38 @@
         "push"
       ];
 
-      targets.forEach(k => {
-        if (navigator[k] !== undefined) {
-          try {
-            Object.defineProperty(navigator, k, {
+      targets.forEach(api => {
+        try {
+          // Detect if the property exists on navigator
+          if (api in navigator) {
+            // Patch the property safely
+            Object.defineProperty(navigator, api, {
               get: deny,
-              configurable: false,
+              configurable: true,
               enumerable: false
             });
-          } catch {
-            // fail silently
           }
+
+          // Also patch the prototype for better coverage (Safari/Firefox)
+          const proto = Object.getPrototypeOf(navigator);
+          if (proto && api in proto) {
+            Object.defineProperty(proto, api, {
+              get: deny,
+              configurable: true,
+              enumerable: false
+            });
+          }
+        } catch {
+          // Fail silently if the browser prevents patching
         }
       });
 
-      // freeze the navigator to prevent further tampering
+      // Freeze navigator to prevent further tampering
       try { Object.freeze(navigator); } catch {}
+      try { Object.freeze(Object.getPrototypeOf(navigator)); } catch {}
+
+      // Freeze window.navigator itself for extra safety
+      try { Object.freeze(window.navigator); } catch {}
     }
   };
 

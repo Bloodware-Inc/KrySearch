@@ -68,6 +68,7 @@
             "base-uri 'none'",
             "frame-ancestors 'none'",
             "form-action 'self'",
+             "img-src 'self' https://github.com/Bloodware-Inc/KrySearch/raw/refs/heads/main/lgoo.png",
             "upgrade-insecure-requests"
           ].join("; ");
           document.head.appendChild(m);

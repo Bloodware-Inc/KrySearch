@@ -25,49 +25,37 @@
             const params = new URLSearchParams(u.search);
 
             for (const key of Array.from(params.keys())) {
-              if (
-                !ALLOWED_PARAMS.has(key) ||
-                TRACKING_PREFIXES.some(p => key.startsWith(p))
-              ) {
+              if (!ALLOWED_PARAMS.has(key) || TRACKING_PREFIXES.some(p => key.startsWith(p))) {
                 params.delete(key);
               }
             }
 
-            return (
-              u.origin +
-              u.pathname +
-              (params.toString() ? "?" + params.toString() : "") +
-              u.hash
-            );
+            return u.origin + u.pathname + (params.toString() ? "?" + params.toString() : "") + u.hash;
           } catch {
             return rawUrl;
           }
         }
 
         /* ===== initial ?url= / ?q= handling ===== */
-
         const urlParams = new URLSearchParams(window.location.search);
         let finalUrl = null;
 
-        if (urlParams.has("url")) {
-          finalUrl = sanitizeUrl(urlParams.get("url"));
-        } else if (urlParams.has("q")) {
-          finalUrl = sanitizeUrl(urlParams.get("q"));
-        }
+        if (urlParams.has("url")) finalUrl = sanitizeUrl(urlParams.get("url"));
+        else if (urlParams.has("q")) finalUrl = sanitizeUrl(urlParams.get("q"));
 
         if (finalUrl) {
-          history.replaceState({}, "", window.location.pathname);
+          try {
+            history.replaceState({}, "", window.location.pathname);
+          } catch {}
           setTimeout(() => {
-            window.location.href = finalUrl;
+            try { window.location.href = finalUrl; } catch {}
           }, 50);
         }
 
         /* ===== link interception ===== */
-
-        document.addEventListener(
-          "click",
-          e => {
-            const a = e.target.closest("a");
+        document.addEventListener("click", e => {
+          try {
+            const a = e.target.closest && e.target.closest("a");
             if (!a || !a.href) return;
 
             const cleanHref = sanitizeUrl(a.href);
@@ -75,18 +63,15 @@
               e.preventDefault();
               e.stopImmediatePropagation();
               setTimeout(() => {
-                window.location.href = cleanHref;
+                try { window.location.href = cleanHref; } catch {}
               }, 50);
             }
-          },
-          true
-        );
+          } catch {}
+        }, true);
 
         /* ===== form interception ===== */
-
-        document.addEventListener(
-          "submit",
-          e => {
+        document.addEventListener("submit", e => {
+          try {
             const f = e.target;
             if (!f || !f.action) return;
 
@@ -95,11 +80,13 @@
               e.preventDefault();
               e.stopImmediatePropagation();
               f.action = cleanAction;
-              setTimeout(() => f.submit(), 50);
+              setTimeout(() => {
+                try { f.submit(); } catch {}
+              }, 50);
             }
-          },
-          true
-        );
+          } catch {}
+        }, true);
+
       } catch (err) {
         console.error("URL Param Sanitizer (GHP) failed:", err);
       }

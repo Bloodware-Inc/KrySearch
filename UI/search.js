@@ -55,8 +55,10 @@ function navigate(url) {
 function handleQuery(value, engineKey, isUrl) {
   if (!CONFIG || !value) return;
   value = value.trim();
-  if (/^http:\/\//i.test(value)) return;
-
+  if (/^http:\/\//i.test(value)) {
+  console.warn('Blocked insecure HTTP URL');
+  return;
+  }
   const engines = { ...CONFIG.engines.open_source, ...CONFIG.engines.closed_source };
   const engine = engines[engineKey] || engines[CONFIG.search.defaultEngine];
   if (!engine) return;

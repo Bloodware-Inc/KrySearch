@@ -34,7 +34,7 @@
 
   const plugin = {
     id: "zk-gsb-equivalent",
-    description: "Feed-aware URL scanner + CSP-safe GitHub Pages compatible",
+    description: "Feed-aware URL scanner + CSP-safe",
     run: async function(ctx) {
       try {
         // Ensure safe assignment to ctx (avoid extensibility errors)

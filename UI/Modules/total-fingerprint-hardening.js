@@ -9,11 +9,8 @@
     id: "total-fingerprint-hardening",
     description: "Full-surface fingerprint normalization for KrySearch",
 
-    run(ctx) {
+    run() {
       try {
-        // Ensure context exists
-        ctx = ctx || (window.KRY_CONTEXT = window.KRY_CONTEXT || {});
-
         // =========================
         // Engine profile
         // =========================
@@ -137,11 +134,11 @@
         if (window.performance) {
           const now = () => Math.floor(Date.now() / profile.perfResolution) * profile.perfResolution;
           performance.now = now;
-          // Do not overwrite timeOrigin
+          // do NOT touch timeOrigin
         }
 
         // =========================
-        // Internal fingerprint state
+        // Internal fingerprint state (local only)
         // =========================
         const fingerprintData = {
           hardened: true,
@@ -155,17 +152,8 @@
           logging: false
         };
 
-        // Safely attach to context even if it's non-extensible
-        try {
-          Object.defineProperty(ctx, "fingerprint", {
-            value: fingerprintData,
-            writable: true,
-            configurable: true
-          });
-        } catch {
-          // fallback: store locally if ctx cannot accept new properties
-          ctx._fingerprint = fingerprintData;
-        }
+        // fingerprintData is local; no object mutation at all
+        // plugin logic can use it internally if needed
 
       } catch (err) {
         console.error("[KrySearch Plugin Error]", err);

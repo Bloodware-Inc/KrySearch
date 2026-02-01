@@ -1,5 +1,8 @@
 /* Ultra-Adaptive Quad9 DoH Resolver (CSP + CORS Safe, URL-Compatible) */
-
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Krynet, LLC
+ * https://github.com/Bloodware-Inc/KrySearch
+ */
 (function () {
   const DOH_SERVERS = [
     "https://dns.quad9.net/dns-query",

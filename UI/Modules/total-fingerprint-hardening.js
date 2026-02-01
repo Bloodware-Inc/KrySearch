@@ -11,17 +11,20 @@
 
     run(ctx) {
       try {
+        // Ensure context exists
         ctx = ctx || (window.KRY_CONTEXT = window.KRY_CONTEXT || {});
 
         // =========================
         // Engine profile
         // =========================
         const engine = new URLSearchParams(location.search).get("engine") || "default";
+
         const ENGINE_PROFILES = {
           default: { vendor: "KrySearch", renderer: "KrySearch Renderer", audioNoise: 0, perfResolution: 100 },
           tor:     { vendor: "Mozilla", renderer: "Gecko", audioNoise: 0, perfResolution: 100 },
           chromium:{ vendor: "Google Inc.", renderer: "ANGLE", audioNoise: 0, perfResolution: 50 }
         };
+
         const profile = ENGINE_PROFILES[engine] || ENGINE_PROFILES.default;
 
         // =========================
@@ -129,18 +132,18 @@
         }
 
         // =========================
-        // Performance API (fixed)
+        // Performance API
         // =========================
         if (window.performance) {
           const now = () => Math.floor(Date.now() / profile.perfResolution) * profile.perfResolution;
           performance.now = now;
-          // DO NOT overwrite timeOrigin — read-only
+          // Do not overwrite timeOrigin
         }
 
         // =========================
-        // Internal state
+        // Internal fingerprint state
         // =========================
-        ctx.fingerprint = {
+        const fingerprintData = {
           hardened: true,
           engineProfile: engine,
           surfaces: [
@@ -151,6 +154,18 @@
           storage: "none",
           logging: false
         };
+
+        // Safely attach to context even if it's non-extensible
+        try {
+          Object.defineProperty(ctx, "fingerprint", {
+            value: fingerprintData,
+            writable: true,
+            configurable: true
+          });
+        } catch {
+          // fallback: store locally if ctx cannot accept new properties
+          ctx._fingerprint = fingerprintData;
+        }
 
       } catch (err) {
         console.error("[KrySearch Plugin Error]", err);

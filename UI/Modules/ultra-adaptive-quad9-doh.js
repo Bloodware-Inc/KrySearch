@@ -1,9 +1,11 @@
-/* Ultra-Adaptive Quad9 DoH Resolver (CSP + CORS Safe, URL-Compatible) */
+/* Ultra-Adaptive Quad9 DoH Resolver (CSP + CORS Safe, GitHub Pages Compatible) */
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
  * https://github.com/Bloodware-Inc/KrySearch
  */
 (function () {
+  "use strict";
+
   const DOH_SERVERS = [
     "https://dns.quad9.net/dns-query",
     "https://dns.google/dns-query",
@@ -12,103 +14,87 @@
 
   const domainCache = new Map();
 
-  // Detect IPv6 support via WebRTC (best-effort)
+  // Best-effort IPv6 detection
   async function supportsIPv6() {
-    return new Promise(function (resolve) {
-      try {
+    try {
+      return await new Promise((resolve) => {
         const rtc = new RTCPeerConnection({ iceServers: [] });
         rtc.createDataChannel("ipv6_test");
-        rtc.createOffer().then(function (offer) {
-          rtc.setLocalDescription(offer);
-        });
-
-        rtc.onicecandidate = function (event) {
-          if (event && event.candidate && event.candidate.candidate.indexOf("ipv6") !== -1) {
-            resolve(true);
-          }
+        rtc.createOffer().then(offer => rtc.setLocalDescription(offer));
+        rtc.onicecandidate = e => {
+          if (e.candidate && e.candidate.candidate.includes("ipv6")) resolve(true);
         };
-
-        setTimeout(function () {
-          resolve(false);
-        }, 2000);
-      } catch {
-        resolve(false);
-      }
-    });
+        setTimeout(() => resolve(false), 1500);
+      });
+    } catch { return false; }
   }
 
   function isDomain(input) {
     return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(input);
   }
 
-  // DoH resolver (NO TypeScript)
- async function resolveWithDoH(domain, type = 'A') {
-  type = type.toUpperCase();
-  const cacheKey = `${domain}_${type}`;
-  if (domainCache.has(cacheKey)) return domainCache.get(cacheKey);
+  async function resolveWithDoH(domain, type = 'A') {
+    type = type.toUpperCase();
+    const cacheKey = `${domain}_${type}`;
+    if (domainCache.has(cacheKey)) return domainCache.get(cacheKey);
 
-  let result = false;
+    let result = [];
 
-  for (const server of DOH_SERVERS) {
-    try {
-      const url = `${server}?name=${encodeURIComponent(domain)}&type=${type}`;
-      const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
-      if (res.ok) {
+    for (const server of DOH_SERVERS) {
+      try {
+        // Use application/dns-json format for GitHub Pages safe fetch
+        const url = `${server}?name=${encodeURIComponent(domain)}&type=${type}`;
+        const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+        if (!res.ok) continue;
         const data = await res.json();
+
+        // Most DoH services respond with 'Answer' array
         if (Array.isArray(data.Answer)) {
-          result = [];
           for (const record of data.Answer) {
             if (type === 'A' || type === 'AAAA') result.push(record.data);
-            else if (type === 'MX') result.push(record.data.split(' ')[1]);
+            else if (type === 'MX') result.push(record.data.split(' ')[1] || record.data);
           }
         }
-        if (result && result.length) break;
-      }
-    } catch {}
-  }
+        if (result.length) break;
+      } catch {}
+    }
 
-  domainCache.set(cacheKey, result);
-  return result;
-}
+    domainCache.set(cacheKey, result);
+    return result;
+  }
 
   const plugin = {
     id: "ultra-adaptive-quad9-doh",
-    description: "Quad9 DoH resolver, CSP/CORS safe, IPv6-ready, URL compatible",
-
+    description: "Quad9 DoH resolver, CSP/CORS safe, IPv6-ready, GitHub Pages compatible",
     run: async function (ctx) {
-      ctx.dnsResolver = { resolve: resolveWithDoH };
-      ctx.supportsIPv6 = await supportsIPv6();
-
-      const params = new URLSearchParams(window.location.search);
-      const inputRaw = (params.get("url") || params.get("q") || "").trim();
-      if (!inputRaw) {
-        ctx.output = null;
-        return;
-      }
-
-      let domain = inputRaw;
       try {
-        domain = new URL(inputRaw).hostname;
-      } catch {}
+        ctx.dnsResolver = { resolve: resolveWithDoH };
+        ctx.supportsIPv6 = await supportsIPv6();
 
-      if (!isDomain(domain)) {
-        ctx.output = null;
-        return;
-      }
+        const params = new URLSearchParams(window.location.search);
+        const inputRaw = (params.get("url") || params.get("q") || "").trim();
+        if (!inputRaw) { ctx.output = null; return; }
 
-      const A = await resolveWithDoH(domain, "A");
-      const AAAA = await resolveWithDoH(domain, "AAAA");
-      const MX = await resolveWithDoH(domain, "MX");
+        let domain = inputRaw;
+        try { domain = new URL(inputRaw).hostname; } catch {}
 
-      ctx.output = {
-        input: inputRaw,
-        domain: domain,
-        A: A || [],
-        AAAA: AAAA || [],
-        MX: MX || [],
-        note:
-          "Resolved via DoH (Quad9 primary, Google & Cloudflare fallback)"
-      };
+        if (!isDomain(domain)) { ctx.output = null; return; }
+
+        const [A, AAAA, MX] = await Promise.all([
+          resolveWithDoH(domain, "A"),
+          resolveWithDoH(domain, "AAAA"),
+          resolveWithDoH(domain, "MX")
+        ]);
+
+        ctx.output = {
+          input: inputRaw,
+          domain: domain,
+          A: A || [],
+          AAAA: AAAA || [],
+          MX: MX || [],
+          note: "Resolved via DoH (Quad9 primary, Google & Cloudflare fallback)"
+        };
+      } catch { ctx.output = null; }
     }
   };
 

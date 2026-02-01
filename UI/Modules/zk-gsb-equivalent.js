@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  const CORS_PROXY = "https://corsproxy.io/?"; // GitHub Pages safe
+  const CORS_PROXY = "https://corsproxy.io/?";
 
   window.KRY_PLUGINS = window.KRY_PLUGINS || [];
   window.KRY_PLUGINS.push({

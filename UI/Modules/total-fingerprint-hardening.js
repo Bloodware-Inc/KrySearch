@@ -7,6 +7,8 @@
  * https://github.com/Bloodware-Inc/KrySearch
  */
 (function () {
+  "use strict";
+
   const plugin = {
     id: "total-fingerprint-hardening",
     description: "Full-surface fingerprint normalization for KrySearch",
@@ -16,7 +18,7 @@
         // =========================
         // Engine profile (deterministic)
         // =========================
-        const engine = new URLSearchParams(location.search).get("engine") || "default";
+        const engine = (new URLSearchParams(location.search).get("engine")) || "default";
 
         const ENGINE_PROFILES = {
           default: { vendor: "KrySearch", renderer: "KrySearch Renderer", audioNoise: 0, perfResolution: 100 },
@@ -30,8 +32,9 @@
         // Canvas
         // =========================
         if (HTMLCanvasElement.prototype.toDataURL) {
-          HTMLCanvasElement.prototype.toDataURL = () =>
-            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+          HTMLCanvasElement.prototype.toDataURL = function () {
+            return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+          };
         }
 
         if (CanvasRenderingContext2D.prototype.getImageData) {
@@ -53,31 +56,25 @@
               7936: "WebGL 1.0",         // VERSION
               7937: "WebGL GLSL ES 1.0"  // SHADING_LANGUAGE_VERSION
             };
-            return p in map ? map[p] : original.call(this, p);
+            return map[p] !== undefined ? map[p] : original.call(this, p);
           };
         }
 
-        lockWebGL(WebGLRenderingContext?.prototype);
-        lockWebGL(WebGL2RenderingContext?.prototype);
+        if (typeof WebGLRenderingContext !== "undefined") lockWebGL(WebGLRenderingContext.prototype);
+        if (typeof WebGL2RenderingContext !== "undefined") lockWebGL(WebGL2RenderingContext.prototype);
 
         // =========================
         // Fonts
         // =========================
         if (document.fonts) {
-          Object.defineProperty(document.fonts, "check", {
-            value: () => true,
-            configurable: true
-          });
-          Object.defineProperty(document.fonts, "values", {
-            value: function* () {},
-            configurable: true
-          });
+          try { document.fonts.check = () => true; } catch {}
+          try { document.fonts.values = function* () {}; } catch {}
         }
 
         // =========================
         // Permissions API
         // =========================
-        if (navigator.permissions?.query) {
+        if (navigator.permissions && navigator.permissions.query) {
           navigator.permissions.query = () => Promise.resolve({ state: "prompt", onchange: null });
         }
 
@@ -99,16 +96,18 @@
         // Network Information API
         // =========================
         if (navigator.connection) {
-          Object.defineProperty(navigator, "connection", {
-            get: () => ({
-              effectiveType: "4g",
-              rtt: 100,
-              downlink: 10,
-              saveData: false,
-              onchange: null
-            }),
-            configurable: true
-          });
+          try {
+            Object.defineProperty(navigator, "connection", {
+              get: () => ({
+                effectiveType: "4g",
+                rtt: 100,
+                downlink: 10,
+                saveData: false,
+                onchange: null
+              }),
+              configurable: true
+            });
+          } catch {}
         }
 
         // =========================
@@ -125,8 +124,8 @@
           };
         }
 
-        lockAudioContext(window.AudioContext?.prototype);
-        lockAudioContext(window.webkitAudioContext?.prototype);
+        if (window.AudioContext) lockAudioContext(window.AudioContext.prototype);
+        if (window.webkitAudioContext) lockAudioContext(window.webkitAudioContext.prototype);
 
         // =========================
         // MediaDevices

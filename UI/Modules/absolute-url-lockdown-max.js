@@ -1,6 +1,7 @@
 /* ==============================
    Absolute URL Lockdown MAX
    Auto ?url= query block + Ultimate browser defense
+   Patched for static local feeds (CORS-free)
    ============================== */
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
@@ -11,11 +12,10 @@
 
   const plugin = {
     id: "absolute-url-lockdown-max",
-    description: "Maximal browser-only URL defense + automatic ?url= blocking",
+    description: "Maximal browser-only URL defense + automatic ?url= blocking (local feeds)",
 
     async run() {
       try {
-        /* ================= CONFIG ================= */
         const BLOCK_THRESHOLD = 60;
         const MAX_DEPTH = 6;
         const SILENT = false;
@@ -25,7 +25,7 @@
         const SHORTENERS = new Set(["bit.ly","t.co","tinyurl.com","goo.gl","is.gd","buff.ly","ow.ly","cutt.ly"]);
         const KEYWORDS = /(login|verify|secure|update|wallet|invoice|payment)/i;
 
-        /* ================= FEEDS ================= */
+        /* ================= LOCAL FEEDS ================= */
         let openPhish = new Set();
         let spamhaus = new Set();
         let malwareHosts = new Set();
@@ -35,22 +35,25 @@
           if (feedsLoaded) return;
           feedsLoaded = true;
           const feeds = [
-            { url: "https://raw.githubusercontent.com/openphish/public_feed/master/feed.txt", set: openPhish },
-            { url: "https://www.spamhaus.org/drop/drop.txt", set: spamhaus },
-            { url: "https://www.spamhaus.org/drop/edrop.txt", set: spamhaus },
-            { url: "https://urlhaus.abuse.ch/downloads/text/", set: malwareHosts },
-            { url: "https://malc0de.com/bl/boot", set: malwareHosts }
+            { url: "/Feeds/openphish.txt", set: openPhish },
+            { url: "/Feeds/spamhaus_drop.txt", set: spamhaus },
+            { url: "/Feeds/spamhaus_edrop.txt", set: spamhaus },
+            { url: "/Feeds/urlhaus.txt", set: malwareHosts },
+            { url: "/Feeds/malc0de.txt", set: malwareHosts }
           ];
-          await Promise.all(feeds.map(async f => {
+          for (const f of feeds) {
             try {
-              const r = await fetch(f.url, { cache: "force-cache" });
+              const r = await fetch(f.url, { cache: "no-store" });
               const t = await r.text();
               t.split("\n").forEach(l => {
                 const d = l.trim().split(/[ ;]/)[0];
                 if (d && !d.startsWith("#")) f.set.add(d);
               });
-            } catch {}
-          }));
+              console.log(`[KrySearch] Loaded ${f.set.size} entries from ${f.url}`);
+            } catch (err) {
+              console.warn(`[KrySearch] Failed to load feed ${f.url}:`, err);
+            }
+          }
         }
 
         await loadFeeds();
@@ -84,7 +87,7 @@
           a.removeAttribute("target");
         }, true);
 
-        /* ================= UTIL ================= */
+        /* ================= URL SCORING ================= */
         function extractRedirect(url) {
           try {
             const u = new URL(url);
@@ -123,50 +126,11 @@
           return { score: Math.min(100, score), reasons };
         }
 
-        async function dohBlocked(host) {
-          try {
-            const r = await fetch("https://cloudflare-dns.com/dns-query?name=" + host, { headers: { accept: "application/dns-json" } });
-            const j = await r.json();
-            return j?.Status !== 0;
-          } catch { return false; }
-        }
-
-        async function checkURLhaus(url) {
-          try {
-            const r = await fetch("https://urlhaus-api.abuse.ch/v1/url/", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url })
-            });
-            const j = await r.json();
-            return j?.query_status === "ok";
-          } catch { return false; }
-        }
-
-        async function sandboxProbe(url) {
-          return new Promise(resolve => {
-            const iframe = document.createElement("iframe");
-            iframe.style.display = "none";
-            iframe.sandbox = "allow-same-origin";
-            let chain = [], last = null;
-            const timer = setTimeout(() => cleanup(), 2500);
-            function cleanup() { clearTimeout(timer); iframe.remove(); resolve({ chain, risky: chain.length>1 }); }
-            iframe.onload = () => { try { const loc = iframe.contentWindow.location.href; if (loc && loc !== last) { chain.push(loc); last = loc; } } catch {} };
-            iframe.src = url; document.body.appendChild(iframe);
-            setTimeout(() => cleanup(), 1800);
-          });
-        }
-
         async function scan(url, depth=0, chain=[]) {
           if (depth > MAX_DEPTH) return { block:true, chain };
           chain.push(url);
           const { score } = scoreUrl(url);
           if (score >= BLOCK_THRESHOLD) return { block:true, chain };
-          try {
-            const u = new URL(url);
-            if (await dohBlocked(u.hostname)) return { block:true, chain };
-            if (await checkURLhaus(url)) return { block:true, chain };
-          } catch { return { block:true, chain }; }
           const r = extractRedirect(url);
           if (r) return scan(r, depth+1, chain);
           const b64 = base64Url(url.split("=").pop());
@@ -181,7 +145,7 @@
           const res = await scan(urlParam);
           if (res.block) {
             if(!SILENT) alert("🚫 Dangerous ?url= query blocked automatically.");
-            history.replaceState({}, "", location.pathname); // Remove ?url= from URL
+            history.replaceState({}, "", location.pathname);
           }
         }
 
@@ -191,25 +155,12 @@
           if (!el) return;
           const url = el.href || el.action;
           if (!url) return;
-          const probe = await sandboxProbe(url);
           const res = await scan(url);
-          if (probe.chain.length) diffChain(probe.chain);
-          if (res.chain.length) diffChain(res.chain);
-          if (probe.risky || res.block) { e.preventDefault(); e.stopImmediatePropagation(); if(!SILENT) alert("🚫 Unsafe URL blocked."); }
+          if (res.block) { e.preventDefault(); e.stopImmediatePropagation(); if(!SILENT) alert("🚫 Unsafe URL blocked."); }
         }
-
-        function diffChain(chain) { if(chain.length<2) return; console.group("🔎 Redirect chain diff"); for(let i=1;i<chain.length;i++){try{const a=new URL(chain[i-1]),b=new URL(chain[i]);console.log(`Hop ${i}:`,{from:a.href,to:b.href,host:a.hostname!==b.hostname,protocol:a.protocol!==b.protocol,path:a.pathname!==b.pathname,query:a.search!==b.search});}catch{}}console.groupEnd(); }
 
         document.addEventListener("click", intercept, true);
         document.addEventListener("submit", intercept, true);
-
-        ["pushState","replaceState"].forEach(fn => {
-          const o = history[fn];
-          history[fn] = function(s,t,u){
-            if(u) intercept({target:{closest:()=>({href:u})},preventDefault(){},stopImmediatePropagation(){}});
-            return o.apply(this,arguments);
-          };
-        });
 
       } catch {}
     }

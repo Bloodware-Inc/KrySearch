@@ -1,43 +1,40 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
- * https://github.com/Bloodware-Inc/KrySearch
+ * Safe “GSB-equivalent” using local static feeds only
  */
 (function () {
   "use strict";
 
-  const CORS_PROXY = "https://corsproxy.io/?";
-
   window.KRY_PLUGINS = window.KRY_PLUGINS || [];
   window.KRY_PLUGINS.push({
-    id: "zk-gsb-equivalent",
-    description: "Google Safe Browsing equivalent without API keys, GitHub Pages compatible",
+    id: "zk-gsb-static",
+    description: "Safe browsing equivalent using local static feeds only",
 
     async run() {
       const FEEDS = {
-        openphish: "https://openphish.com/feed.txt",
-        urlhaus: "https://urlhaus.abuse.ch/downloads/text/",
-        sinking: "https://phish.sinking.yachts/v2/all",
-        malwaredomains: "https://mirror1.malwaredomains.com/files/domains.txt",
-        easyprivacy: "https://easylist.to/easylist/easyprivacy.txt"
+        openphish: "/Feeds/openphish.txt",
+        urlhaus: "/Feeds/urlhaus.txt",
+        malwaredomains: "/Feeds/malwaredomains.txt",
+        easyprivacy: "/Feeds/easyprivacy.txt"
       };
 
       const BAD = new Set();
 
-      await Promise.all(
-        Object.values(FEEDS).map(feed =>
-          fetch(CORS_PROXY + encodeURIComponent(feed), { cache: "no-store" })
-            .then(r => r.text())
-            .then(text =>
-              text.split("\n").forEach(line => {
-                line = line.trim();
-                if (line && !line.startsWith("#") && line.length < 255) {
-                  BAD.add(line.replace(/^0\.0\.0\.0\s+/, ""));
-                }
-              })
-            )
-            .catch(() => console.warn(`Failed to fetch feed: ${feed}`))
-        )
-      );
+      for (const [name, url] of Object.entries(FEEDS)) {
+        try {
+          const res = await fetch(url, { cache: "no-store" });
+          const text = await res.text();
+          text.split("\n").forEach(line => {
+            line = line.trim();
+            if (line && !line.startsWith("#") && line.length < 255) {
+              BAD.add(line.replace(/^0\.0\.0\.0\s+/, ""));
+            }
+          });
+          console.log(`[KrySearch] Loaded ${BAD.size} entries from ${name}`);
+        } catch (err) {
+          console.warn(`[KrySearch] Failed to load feed ${name}:`, err);
+        }
+      }
 
       const entropy = s => new Set(s).size / Math.max(1, s.length);
 
@@ -51,39 +48,24 @@
       }
 
       function verdict(url) {
-        try {
-          const u = new URL(url);
-          if (u.protocol !== "https:") throw "no https";
-          const score = heuristicScore(u.hostname);
-          if (score < 50) throw "unsafe";
-          return url;
-        } catch {
-          throw "unsafe";
-        }
+        const u = new URL(url);
+        if (u.protocol !== "https:") throw "no https";
+        const score = heuristicScore(u.hostname);
+        if (score < 50) throw "unsafe";
+        return url;
       }
 
-      // Override window.open
       const _open = window.open;
-      window.open = function (url, ...args) {
-        try {
-          return _open(verdict(url), ...args);
-        } catch {
-          alert("🚫 Blocked by Safe‑Browsing equivalent layer");
-        }
+      window.open = function(url, ...args) {
+        try { return _open(verdict(url), ...args); }
+        catch { alert("🚫 Blocked by Safe‑Browsing layer"); }
       };
 
-      // Auto-check ?url= on page load
       const qp = new URLSearchParams(location.search);
       if (qp.has("url")) {
-        try {
-          location.replace(verdict(qp.get("url")));
-        } catch {
-          document.body.innerHTML =
-            "<h2>🚫 Unsafe destination blocked</h2>";
-        }
+        try { location.replace(verdict(qp.get("url"))); }
+        catch { document.body.innerHTML = "<h2>🚫 Unsafe destination blocked</h2>"; }
       }
-
-      console.log("[KrySearch] zk-gsb-equivalent loaded:", BAD.size, "domains loaded");
     }
   });
 })();

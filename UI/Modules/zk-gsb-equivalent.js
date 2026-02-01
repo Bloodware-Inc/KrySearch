@@ -15,11 +15,11 @@
     description: "Safe Browsing equivalent using local feeds only",
 
     async run() {
-      const FEEDS = {
-        openphish: "Feeds/openphish.txt",
-        urlhaus: "Feeds/urlhaus.txt",
-        spamhaus: "Feeds/spamhaus_drop.txt"
-      };
+          const FEEDS = [
+            { url: "Modules/Feeds/openphish.txt", set: openPhish },
+            { url: "Modules/Feeds/spamhaus_drop.txt", set: spamhaus },
+            { url: "Modules/Feeds/urlhaus.txt", set: malwareHosts }
+          ];
 
       const BAD = new Set();
 

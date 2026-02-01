@@ -14,9 +14,9 @@
 
   async function loadFeeds() {
     const feeds = [
-      { url: "Feeds/openPhish.txt", set: openPhish },
-      { url: "Feeds/drop.txt", set: spamhaus }, // edrop merged into drop
-      { url: "Feeds/urlhaus.txt", set: malwareHosts }
+      { url: "Modules/Feeds/openPhish.txt", set: openPhish },
+      { url: "Modules/Feeds/drop.txt", set: spamhaus }, // edrop merged into drop
+      { url: "Modules/Feeds/urlhaus.txt", set: malwareHosts }
     ];
 
     await Promise.all(feeds.map(async f => {

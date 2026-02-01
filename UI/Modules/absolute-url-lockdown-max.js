@@ -1,7 +1,6 @@
 /* ==============================
    Absolute URL Lockdown MAX
-   Auto ?url= query block + Ultimate browser defense
-   Patched for static local feeds (CORS-free)
+   Local feed version – no CORS issues
    ============================== */
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
@@ -12,10 +11,11 @@
 
   const plugin = {
     id: "absolute-url-lockdown-max",
-    description: "Maximal browser-only URL defense + automatic ?url= blocking (local feeds)",
+    description: "Maximal browser-only URL defense using local feeds",
 
     async run() {
       try {
+        /* ================= CONFIG ================= */
         const BLOCK_THRESHOLD = 60;
         const MAX_DEPTH = 6;
         const SILENT = false;
@@ -25,7 +25,7 @@
         const SHORTENERS = new Set(["bit.ly","t.co","tinyurl.com","goo.gl","is.gd","buff.ly","ow.ly","cutt.ly"]);
         const KEYWORDS = /(login|verify|secure|update|wallet|invoice|payment)/i;
 
-        /* ================= LOCAL FEEDS ================= */
+        /* ================= FEEDS ================= */
         let openPhish = new Set();
         let spamhaus = new Set();
         let malwareHosts = new Set();
@@ -34,26 +34,25 @@
         async function loadFeeds() {
           if (feedsLoaded) return;
           feedsLoaded = true;
+
           const feeds = [
-            { url: "/Feeds/openphish.txt", set: openPhish },
-            { url: "/Feeds/spamhaus_drop.txt", set: spamhaus },
-            { url: "/Feeds/spamhaus_edrop.txt", set: spamhaus },
-            { url: "/Feeds/urlhaus.txt", set: malwareHosts },
-            { url: "/Feeds/malc0de.txt", set: malwareHosts }
+            { url: "Feeds/openphish.txt", set: openPhish },
+            { url: "Feeds/spamhaus_drop.txt", set: spamhaus },
+            { url: "Feeds/urlhaus.txt", set: malwareHosts }
           ];
-          for (const f of feeds) {
+
+          await Promise.all(feeds.map(async f => {
             try {
-              const r = await fetch(f.url, { cache: "no-store" });
+              const r = await fetch(f.url, { cache: "force-cache" });
               const t = await r.text();
               t.split("\n").forEach(l => {
                 const d = l.trim().split(/[ ;]/)[0];
                 if (d && !d.startsWith("#")) f.set.add(d);
               });
-              console.log(`[KrySearch] Loaded ${f.set.size} entries from ${f.url}`);
             } catch (err) {
-              console.warn(`[KrySearch] Failed to load feed ${f.url}:`, err);
+              console.warn(`[KrySearch] Failed to load feed: ${f.url}`, err);
             }
-          }
+          }));
         }
 
         await loadFeeds();
@@ -87,7 +86,7 @@
           a.removeAttribute("target");
         }, true);
 
-        /* ================= URL SCORING ================= */
+        /* ================= UTIL ================= */
         function extractRedirect(url) {
           try {
             const u = new URL(url);
@@ -145,7 +144,7 @@
           const res = await scan(urlParam);
           if (res.block) {
             if(!SILENT) alert("🚫 Dangerous ?url= query blocked automatically.");
-            history.replaceState({}, "", location.pathname);
+            history.replaceState({}, "", location.pathname); // Remove ?url= from URL
           }
         }
 

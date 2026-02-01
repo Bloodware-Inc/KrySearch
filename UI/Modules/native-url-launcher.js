@@ -1,8 +1,3 @@
-/**
- * OpenInApp – Krynet Plugin
- * Fully cross-platform, production-ready
- * Tries native app first, naturally falls back to browser
- */
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
  * https://github.com/Bloodware-Inc/KrySearch
@@ -14,21 +9,16 @@ window.KRY_PLUGINS.push({
 
   run: function (ctx) {
     try {
-      const params = new URLSearchParams(location.search);
-      const urlParamRaw = params.get("url");
+      var params = new URLSearchParams(location.search);
+      var urlParamRaw = params.get("url");
       if (!urlParamRaw) return;
 
-      let urlParam;
-      try {
-        urlParam = decodeURIComponent(urlParamRaw);
-      } catch {
-        urlParam = urlParamRaw;
-      }
-
+      var urlParam;
+      try { urlParam = decodeURIComponent(urlParamRaw); } catch { urlParam = urlParamRaw; }
       if (!/^https:\/\//i.test(urlParam)) return;
 
       // Default apps & schemes
-      const apps = [
+      var apps = [
         { test: /steam\.com/, scheme: function (url) { return "steam://openurl/" + encodeURIComponent(url); } },
         { test: /epicgames\.com/, scheme: function (url) { return "com.epicgames.launcher://" + encodeURIComponent(url); } },
         { test: /gog\.com/, scheme: function (url) { return "goggalaxy://launch/" + encodeURIComponent(url); } },
@@ -48,28 +38,35 @@ window.KRY_PLUGINS.push({
 
       function tryOpenApp(appUrl) {
         try {
-          const iframe = document.createElement("iframe");
+          var iframe = document.createElement("iframe");
           iframe.style.display = "none";
           iframe.src = appUrl;
           document.body.appendChild(iframe);
           setTimeout(function () {
-            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
           }, 1000);
         } catch {}
       }
 
-      for (let i = 0; i < apps.length; i++) {
-        const app = apps[i];
+      for (var i = 0; i < apps.length; i++) {
+        var app = apps[i];
         if (app.test.test(urlParam)) {
-          const appUrl = app.scheme(urlParam);
-          if (window.__KRY_HARD_NAV__) {
-            window.__KRY_HARD_NAV__(appUrl);
-          } else {
+          var appUrl = app.scheme(urlParam);
+          try {
+            if (window.__KRY_HARD_NAV__ && typeof window.__KRY_HARD_NAV__ === "function") {
+              window.__KRY_HARD_NAV__(appUrl);
+            } else {
+              tryOpenApp(appUrl);
+            }
+          } catch {
             tryOpenApp(appUrl);
           }
           break;
         }
       }
+
     } catch {}
   }
 });

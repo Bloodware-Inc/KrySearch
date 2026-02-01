@@ -7,7 +7,7 @@ KrySearch provides users with a way to search the web privately, without the tra
 ---
 
 ## Features
-
+[![LibreJS Compatible](https://img.shields.io/badge/LibreJS-OK-success?style=flat)](https://www.gnu.org/software/librejs/)
 - **Privacy-Focused**: Does not collect or store any user data.
 - **Open Source**: Fully open-source and licensed under the **GNU GPL 3.0**.
 - **No Tracking**: No user tracking or personalized ads.
@@ -24,7 +24,7 @@ KrySearch provides users with a way to search the web privately, without the tra
 - **CSP-compliant and XSS-safe**
 
 ## License
-
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 KrySearch is licensed under the **GNU General Public License v3.0**. You can view the full text of the license in the [LICENSE](LICENSE) file.
 
 ---

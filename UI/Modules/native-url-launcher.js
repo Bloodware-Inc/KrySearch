@@ -9,45 +9,54 @@ window.KRY_PLUGINS.push({
   id: "open-in-app-clean",
   order: 60,
 
-  run(ctx: any) {
+  run: function (ctx) {
     try {
-      const urlParamRaw = new URLSearchParams(location.search).get("url");
+      const params = new URLSearchParams(location.search);
+      const urlParamRaw = params.get("url");
       if (!urlParamRaw) return;
 
-      let urlParam: string;
-      try { urlParam = decodeURIComponent(urlParamRaw); } catch { urlParam = urlParamRaw; }
+      let urlParam;
+      try {
+        urlParam = decodeURIComponent(urlParamRaw);
+      } catch {
+        urlParam = urlParamRaw;
+      }
+
       if (!/^https:\/\//i.test(urlParam)) return;
 
       // Default apps & schemes
       const apps = [
-        { test: /steam\.com/, scheme: (url: string) => `steam://openurl/${encodeURIComponent(url)}` },
-        { test: /epicgames\.com/, scheme: (url: string) => `com.epicgames.launcher://${encodeURIComponent(url)}` },
-        { test: /gog\.com/, scheme: (url: string) => `goggalaxy://launch/${encodeURIComponent(url)}` },
-        { test: /battle\.net/, scheme: (url: string) => `battlenet://${encodeURIComponent(url)}` },
+        { test: /steam\.com/, scheme: function (url) { return "steam://openurl/" + encodeURIComponent(url); } },
+        { test: /epicgames\.com/, scheme: function (url) { return "com.epicgames.launcher://" + encodeURIComponent(url); } },
+        { test: /gog\.com/, scheme: function (url) { return "goggalaxy://launch/" + encodeURIComponent(url); } },
+        { test: /battle\.net/, scheme: function () { return "battlenet://"; } },
 
-        { test: /discord\.com/, scheme: () => 'discord://' },
-        { test: /slack\.com/, scheme: () => 'slack://open' },
-        { test: /teams\.microsoft\.com/, scheme: (url: string) => `msteams://${encodeURIComponent(url)}` },
-        { test: /zoom\.us/, scheme: (url: string) => `zoomus://${encodeURIComponent(url)}` },
+        { test: /discord\.com/, scheme: function () { return "discord://"; } },
+        { test: /slack\.com/, scheme: function () { return "slack://open"; } },
+        { test: /teams\.microsoft\.com/, scheme: function (url) { return "msteams://" + encodeURIComponent(url); } },
+        { test: /zoom\.us/, scheme: function (url) { return "zoomus://" + encodeURIComponent(url); } },
 
-        { test: /spotify\.com/, scheme: () => 'spotify://' },
-        { test: /youtube\.com/, scheme: (url: string) => `youtube://${encodeURIComponent(url)}` },
-        { test: /twitch\.tv/, scheme: (url: string) => `twitch://${encodeURIComponent(url)}` },
+        { test: /spotify\.com/, scheme: function () { return "spotify://"; } },
+        { test: /youtube\.com/, scheme: function (url) { return "youtube://" + encodeURIComponent(url); } },
+        { test: /twitch\.tv/, scheme: function (url) { return "twitch://" + encodeURIComponent(url); } },
 
-        { test: /krynet\.ai/, scheme: (url: string) => `krynet://${encodeURIComponent(url)}` }
+        { test: /krynet\.ai/, scheme: function (url) { return "krynet://" + encodeURIComponent(url); } }
       ];
 
-      const tryOpenApp = (appUrl: string) => {
+      function tryOpenApp(appUrl) {
         try {
-          const iframe = document.createElement('iframe');
-          iframe.style.display = 'none';
+          const iframe = document.createElement("iframe");
+          iframe.style.display = "none";
           iframe.src = appUrl;
           document.body.appendChild(iframe);
-          setTimeout(() => document.body.removeChild(iframe), 1000);
+          setTimeout(function () {
+            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+          }, 1000);
         } catch {}
-      };
+      }
 
-      for (const app of apps) {
+      for (let i = 0; i < apps.length; i++) {
+        const app = apps[i];
         if (app.test.test(urlParam)) {
           const appUrl = app.scheme(urlParam);
           if (window.__KRY_HARD_NAV__) {

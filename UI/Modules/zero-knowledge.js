@@ -37,21 +37,27 @@
 
         /* ================= CSP ================= */
 
-        if(!document.querySelector('meta[http-equiv="Content-Security-Policy"]')){
-          const c=document.createElement("meta");
-          c.httpEquiv="Content-Security-Policy";
-          c.content=[
-            "default-src 'self'",
-            "script-src 'self'",
-            "connect-src 'self'",
-            "frame-src 'none'",
-            "object-src 'none'",
-            "base-uri 'none'",
-            "form-action 'self'",
-            "upgrade-insecure-requests"
-          ].join("; ");
-          document.head.appendChild(c);
-        }
+if(!document.querySelector('meta[http-equiv="Content-Security-Policy"]')){
+  const c=document.createElement("meta");
+  c.httpEquiv="Content-Security-Policy";
+  c.content=[
+    "default-src 'none'",
+    "script-src 'self' https:",
+    "connect-src 'self' https:",
+    "img-src 'self' https:",
+    "style-src 'self' https:",
+    "font-src 'self' https:",
+    "media-src 'self' https:",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "require-trusted-types-for 'script'",
+    "upgrade-insecure-requests"
+  ].join("; ");
+  document.head.appendChild(c);
+}
 
         /* ================= CRYPTO ================= */
 

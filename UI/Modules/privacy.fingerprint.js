@@ -15,16 +15,13 @@
         if (window.matchMedia) {
           const realMatchMedia = window.matchMedia.bind(window);
           window.matchMedia = function (query) {
-            // Return deterministic fake values
-            const matches = /prefers-color-scheme: dark/i.test(query)
-              ? false
-              : /prefers-reduced-motion/i.test(query)
-              ? false
-              : /prefers-contrast/i.test(query)
-              ? "no-preference"
-              : false;
+            let matches = false;
+            if (/prefers-color-scheme: dark/i.test(query)) matches = false;
+            else if (/prefers-reduced-motion/i.test(query)) matches = false;
+            else if (/prefers-contrast/i.test(query)) matches = "no-preference";
+
             return {
-              matches,
+              matches: matches,
               media: query,
               addListener: () => {},
               removeListener: () => {},
@@ -33,18 +30,17 @@
               dispatchEvent: () => false
             };
           };
-          Object.freeze(window.matchMedia);
+          try { Object.freeze(window.matchMedia); } catch {}
         }
 
         // ===============================
         // 2. Font Metrics / Layout Timing
         // ===============================
-        const neutralizeElement = (elProto) => {
-          if (!elProto) return;
+        function neutralizeElement(elProto) {
+          if (!elProto || !elProto.getBoundingClientRect) return;
           const realGetBoundingClientRect = elProto.getBoundingClientRect;
           elProto.getBoundingClientRect = function () {
             const rect = realGetBoundingClientRect.call(this);
-            // Normalize widths/heights to integer multiples to remove entropy
             return {
               x: Math.round(rect.x),
               y: Math.round(rect.y),
@@ -56,7 +52,7 @@
               bottom: Math.round(rect.bottom)
             };
           };
-        };
+        }
 
         neutralizeElement(Element.prototype);
         neutralizeElement(HTMLElement.prototype);
@@ -65,32 +61,38 @@
         // 3. Hardware Concurrency
         // ===============================
         if ("hardwareConcurrency" in navigator) {
-          Object.defineProperty(navigator, "hardwareConcurrency", {
-            get: () => 4, // most common baseline
-            configurable: false,
-            enumerable: true
-          });
+          try {
+            Object.defineProperty(navigator, "hardwareConcurrency", {
+              get: function () { return 4; },
+              configurable: false,
+              enumerable: true
+            });
+          } catch {}
         }
 
         // ===============================
         // 4. GPU Timing / WebGPU
         // ===============================
         if (window.GPUDevice) {
-          const deviceProto = GPUDevice.prototype;
-          if (deviceProto?.createCommandEncoder) {
-            const origEncoder = deviceProto.createCommandEncoder;
-            deviceProto.createCommandEncoder = function (...args) {
-              const enc = origEncoder.call(this, ...args);
-              // Override methods that could expose timing
-              enc.finish = new Proxy(enc.finish, {
-                apply(target, thisArg, argumentsList) {
-                  // simulate a constant duration
-                  return target.apply(thisArg, argumentsList);
+          try {
+            const deviceProto = window.GPUDevice.prototype;
+            if (deviceProto && deviceProto.createCommandEncoder) {
+              const origEncoder = deviceProto.createCommandEncoder;
+              deviceProto.createCommandEncoder = function () {
+                const enc = origEncoder.apply(this, arguments);
+                if (enc && enc.finish) {
+                  try {
+                    enc.finish = new Proxy(enc.finish, {
+                      apply(target, thisArg, argumentsList) {
+                        return target.apply(thisArg, argumentsList);
+                      }
+                    });
+                  } catch {}
                 }
-              });
-              return enc;
-            };
-          }
+                return enc;
+              };
+            }
+          } catch {}
         }
 
       } catch {

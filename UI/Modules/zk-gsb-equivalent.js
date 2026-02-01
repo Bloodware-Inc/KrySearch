@@ -5,10 +5,12 @@
 (function () {
   "use strict";
 
+  const CORS_PROXY = "https://corsproxy.io/?"; // GitHub Pages safe
+
   window.KRY_PLUGINS = window.KRY_PLUGINS || [];
   window.KRY_PLUGINS.push({
     id: "zk-gsb-equivalent",
-    description: "Google Safe Browsing equivalent without API keys",
+    description: "Google Safe Browsing equivalent without API keys, GitHub Pages compatible",
 
     async run() {
       const FEEDS = {
@@ -16,29 +18,24 @@
         urlhaus: "https://urlhaus.abuse.ch/downloads/text/",
         sinking: "https://phish.sinking.yachts/v2/all",
         malwaredomains: "https://mirror1.malwaredomains.com/files/domains.txt",
-        easyprivacy:
-          "https://easylist.to/easylist/easyprivacy.txt"
+        easyprivacy: "https://easylist.to/easylist/easyprivacy.txt"
       };
 
       const BAD = new Set();
 
       await Promise.all(
-        Object.values(FEEDS).map(u =>
-          fetch(u)
+        Object.values(FEEDS).map(feed =>
+          fetch(CORS_PROXY + encodeURIComponent(feed), { cache: "no-store" })
             .then(r => r.text())
-            .then(t =>
-              t.split("\n").forEach(l => {
-                l = l.trim();
-                if (
-                  l &&
-                  !l.startsWith("#") &&
-                  l.length < 255
-                ) {
-                  BAD.add(l.replace(/^0\.0\.0\.0\s+/, ""));
+            .then(text =>
+              text.split("\n").forEach(line => {
+                line = line.trim();
+                if (line && !line.startsWith("#") && line.length < 255) {
+                  BAD.add(line.replace(/^0\.0\.0\.0\s+/, ""));
                 }
               })
             )
-            .catch(() => {})
+            .catch(() => console.warn(`Failed to fetch feed: ${feed}`))
         )
       );
 
@@ -54,14 +51,18 @@
       }
 
       function verdict(url) {
-        const u = new URL(url);
-        if (u.protocol !== "https:") throw "no https";
-
-        const score = heuristicScore(u.hostname);
-        if (score < 50) throw "unsafe";
-        return url;
+        try {
+          const u = new URL(url);
+          if (u.protocol !== "https:") throw "no https";
+          const score = heuristicScore(u.hostname);
+          if (score < 50) throw "unsafe";
+          return url;
+        } catch {
+          throw "unsafe";
+        }
       }
 
+      // Override window.open
       const _open = window.open;
       window.open = function (url, ...args) {
         try {
@@ -71,6 +72,7 @@
         }
       };
 
+      // Auto-check ?url= on page load
       const qp = new URLSearchParams(location.search);
       if (qp.has("url")) {
         try {
@@ -80,6 +82,8 @@
             "<h2>🚫 Unsafe destination blocked</h2>";
         }
       }
+
+      console.log("[KrySearch] zk-gsb-equivalent loaded:", BAD.size, "domains loaded");
     }
   });
 })();

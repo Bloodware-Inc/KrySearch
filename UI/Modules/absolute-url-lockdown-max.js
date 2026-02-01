@@ -1,7 +1,3 @@
-/* ==============================
-   Absolute URL Lockdown MAX
-   Local feed version – no CORS issues
-   ============================== */
 /* SPDX-License-Identifier: GPL-3.0-or-later
  * Copyright (C) 2026 Krynet, LLC
  * https://github.com/Bloodware-Inc/KrySearch

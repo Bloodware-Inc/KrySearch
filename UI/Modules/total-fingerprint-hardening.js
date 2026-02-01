@@ -2,6 +2,10 @@
  * Silent, deterministic, privacy-first
  * Covers all high-entropy JS surfaces
  */
+/* SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Krynet, LLC
+ * https://github.com/Bloodware-Inc/KrySearch
+ */
 (function () {
   const plugin = {
     id: "total-fingerprint-hardening",

@@ -39,54 +39,34 @@
   }
 
   // DoH resolver (NO TypeScript)
-  async function resolveWithDoH(domain, type) {
-    type = (type || "A").toUpperCase();
-    const cacheKey = domain + "_" + type;
+ async function resolveWithDoH(domain, type = 'A') {
+  type = type.toUpperCase();
+  const cacheKey = `${domain}_${type}`;
+  if (domainCache.has(cacheKey)) return domainCache.get(cacheKey);
 
-    if (domainCache.has(cacheKey)) {
-      return domainCache.get(cacheKey);
-    }
+  let result = false;
 
-    let result = false;
-
-    for (let i = 0; i < DOH_SERVERS.length; i++) {
-      const server = DOH_SERVERS[i];
-      try {
-        const url =
-          server +
-          "?name=" +
-          encodeURIComponent(domain) +
-          "&type=" +
-          encodeURIComponent(type);
-
-        const res = await fetch(url, {
-          cache: "no-store",
-          mode: "cors"
-        });
-
-        if (!res.ok) continue;
-
+  for (const server of DOH_SERVERS) {
+    try {
+      const url = `${server}?name=${encodeURIComponent(domain)}&type=${type}`;
+      const res = await fetch(url, { cache: 'no-store', mode: 'cors' });
+      if (res.ok) {
         const data = await res.json();
-        if (!Array.isArray(data.Answer)) continue;
-
-        result = [];
-        for (let j = 0; j < data.Answer.length; j++) {
-          const record = data.Answer[j];
-          if (type === "A" || type === "AAAA") {
-            result.push(record.data);
-          } else if (type === "MX") {
-            const parts = record.data.split(" ");
-            if (parts[1]) result.push(parts[1]);
+        if (Array.isArray(data.Answer)) {
+          result = [];
+          for (const record of data.Answer) {
+            if (type === 'A' || type === 'AAAA') result.push(record.data);
+            else if (type === 'MX') result.push(record.data.split(' ')[1]);
           }
         }
-
-        if (result.length) break;
-      } catch {}
-    }
-
-    domainCache.set(cacheKey, result);
-    return result;
+        if (result && result.length) break;
+      }
+    } catch {}
   }
+
+  domainCache.set(cacheKey, result);
+  return result;
+}
 
   const plugin = {
     id: "ultra-adaptive-quad9-doh",
